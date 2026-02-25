@@ -1,5 +1,6 @@
 import argparse
 import json
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -13,6 +14,13 @@ from .utils.log import get_logger
 
 
 LOGGER = get_logger(__name__)
+_SHUTDOWN = False
+
+
+def _handle_signal(signum, frame):
+    global _SHUTDOWN
+    LOGGER.info("received signal %d, will shut down after current project", signum)
+    _SHUTDOWN = True
 
 
 def load_system_config(repo_root: Path) -> dict:
@@ -39,7 +47,8 @@ def git_sync(repo_root: Path, project_id: str, state: str) -> None:
         LOGGER.warning("git sync error: %s", exc)
 
 
-def run_once(repo_root: Path) -> None:
+def run_once(repo_root: Path) -> str:
+    """Run one full project lifecycle. Returns final state."""
     cfg = load_system_config(repo_root)
     project_root = cfg.get("system", {}).get("project_root", "projects")
     projects_dir = (repo_root / project_root).resolve()
@@ -58,7 +67,8 @@ def run_once(repo_root: Path) -> None:
 
     if not storage.try_lock(pid):
         LOGGER.error("failed to lock project %s", pid)
-        return
+        storage.close()
+        return "ABORT"
 
     state = "IDEA"
     try:
@@ -72,26 +82,57 @@ def run_once(repo_root: Path) -> None:
     storage.close()
 
     git_sync(repo_root, pid, state)
+    return state
+
+
+def run_daemon(repo_root: Path, max_projects: int = 0) -> None:
+    """Continuous daemon loop. max_projects=0 means infinite."""
+    signal.signal(signal.SIGTERM, _handle_signal)
+    signal.signal(signal.SIGINT, _handle_signal)
+
+    cfg = load_system_config(repo_root)
+    daemon_cfg = cfg.get("daemon", {})
+    loop_interval = daemon_cfg.get("loop_interval_seconds", 60)
+
+    count = 0
+    while True:
+        if _SHUTDOWN:
+            LOGGER.info("shutdown requested, exiting daemon")
+            break
+        if max_projects > 0 and count >= max_projects:
+            LOGGER.info("reached max projects (%d), exiting daemon", max_projects)
+            break
+
+        count += 1
+        LOGGER.info("=== daemon cycle %d (max=%s) ===", count, max_projects or "inf")
+
+        try:
+            state = run_once(repo_root)
+            LOGGER.info("cycle %d finished with state: %s", count, state)
+        except Exception:
+            LOGGER.exception("cycle %d crashed, will retry after interval", count)
+
+        if _SHUTDOWN:
+            break
+
+        LOGGER.info("sleeping %ds before next cycle...", loop_interval)
+        time.sleep(loop_interval)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="FARS MVP daemon")
-    parser.add_argument("--once", action="store_true", help="Run one full project cycle")
-    parser.add_argument("--max-projects", type=int, default=1)
-    parser.add_argument("--sleep", type=int, default=60)
+    parser.add_argument("--once", action="store_true",
+                        help="Run one project then exit")
+    parser.add_argument("--max-projects", type=int, default=0,
+                        help="Max projects to run (0=infinite)")
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
 
     if args.once:
         run_once(repo_root)
-        return
-
-    for i in range(args.max_projects):
-        LOGGER.info("=== daemon cycle %d/%d ===", i + 1, args.max_projects)
-        run_once(repo_root)
-        if i < args.max_projects - 1:
-            time.sleep(args.sleep)
+    else:
+        run_daemon(repo_root, max_projects=args.max_projects)
 
 
 if __name__ == "__main__":

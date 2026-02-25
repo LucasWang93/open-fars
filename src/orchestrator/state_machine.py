@@ -74,11 +74,30 @@ def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
             meta["state"] = "RUN"
 
         elif state == "RUN":
-            from ..agents.experiment import run_experiment
-            run_experiment(project_dir, repo_root)
+            from ..compute.sbatch_gen import generate_sbatch_script
+            from ..compute.slurm_runner import submit_job, poll_job
+
+            sys_cfg = yaml.safe_load(
+                (repo_root / "config" / "system.yaml").read_text()
+            )
+            slurm_cfg = sys_cfg.get("slurm", {})
+            log_dir = repo_root / "artifacts" / "slurm_logs" / pid
+            script = generate_sbatch_script(project_dir, repo_root, log_dir, slurm_cfg)
+
+            job_id = submit_job(script, "fars_" + pid, log_dir, slurm_cfg)
+            meta["slurm_job_id"] = job_id
+            _save_meta(project_dir, meta)
+            storage.update_state(pid, "RUN", meta)
+
+            LOGGER.info("experiment submitted as slurm job %d, polling...", job_id)
+            job_state = poll_job(job_id, timeout_minutes=slurm_cfg.get("timeout_minutes", 180))
+
+            if job_state != "COMPLETED":
+                return _fail_or_retry(project_dir, meta, storage, "Slurm job %d: %s" % (job_id, job_state))
+
             ok, msg = gate_b_experiment(project_dir)
             if not ok:
-                return _fail_or_retry(project_dir, meta, storage, f"Gate B: {msg}")
+                return _fail_or_retry(project_dir, meta, storage, "Gate B: %s" % msg)
             meta["state"] = "ANALYZE"
 
         elif state == "ANALYZE":
