@@ -1,21 +1,31 @@
 taskspace:
-  name: "toy_reward_shaping"
+  name: "qwen3_finetuning"
+  models:
+    - "Qwen/Qwen3-VL-4B-Instruct"
+    - "Qwen/Qwen3-4B-Instruct-2507"
   baseline:
-    script: "python -m exp.run --config configs/baseline.yaml"
-    primary_metric: "score"
+    script: "python -m src.compute.train_qwen --config"
+    primary_metric: "eval_loss"
+    higher_is_better: false
   actions:
     - id: "lr_up"
       patch:
-        train.lr: 0.0002
+        train.learning_rate: 0.0002
     - id: "lr_down"
       patch:
-        train.lr: 0.00005
-    - id: "temp_up"
+        train.learning_rate: 0.00005
+    - id: "warmup_more"
       patch:
-        gen.temperature: 1.2
-    - id: "temp_down"
+        train.warmup_ratio: 0.1
+    - id: "epochs_up"
       patch:
-        gen.temperature: 0.7
+        train.num_train_epochs: 3
+    - id: "lora_rank_up"
+      patch:
+        lora.rank: 32
+    - id: "lora_rank_down"
+      patch:
+        lora.rank: 8
   limits:
     max_actions_per_project: 2
-    seeds: [11, 22, 33]
+    seeds: [42, 123, 7]

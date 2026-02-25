@@ -1,7 +1,6 @@
-"""Ideation agent: pick actions from taskspace, write idea.json + idea.md."""
+"""Ideation agent: use GPT-4o to pick actions from taskspace and form hypothesis."""
 
 import json
-import random
 from pathlib import Path
 
 import yaml
@@ -24,17 +23,33 @@ def run_ideation(project_dir: Path, repo_root: Path) -> None:
     max_actions = ts["limits"]["max_actions_per_project"]
     action_ids = [a["id"] for a in actions]
 
-    router = get_router("mock")
+    actions_desc = chr(10).join(
+        "- %s: %s" % (a["id"], json.dumps(a["patch"])) for a in actions
+    )
 
-    k = random.randint(1, min(max_actions, len(actions)))
-    chosen = random.sample(action_ids, k)
+    user_prompt = IDEATION_USER.format(
+        taskspace_name=ts["name"],
+        primary_metric=ts["baseline"]["primary_metric"],
+        actions_list=actions_desc,
+        max_actions=max_actions,
+    )
+
+    router = get_router("azure_gpt4o")
+    raw = router.generate(IDEATION_SYSTEM, user_prompt, json_mode=True)
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        LOGGER.error("LLM returned non-JSON, falling back: %s", raw[:200])
+        result = {"actions": action_ids[:1], "hypothesis": "fallback hypothesis"}
+
+    chosen = [a for a in result.get("actions", []) if a in action_ids]
+    if not chosen:
+        chosen = action_ids[:1]
+
     patches = {a["id"]: a["patch"] for a in actions}
     chosen_patches = {aid: patches[aid] for aid in chosen}
-
-    hypothesis = (
-        f"Applying {', '.join(chosen)} to the baseline will improve "
-        f"{ts['baseline']['primary_metric']}."
-    )
+    hypothesis = result.get("hypothesis", "No hypothesis provided")
 
     idea = {
         "actions": chosen,
@@ -47,9 +62,11 @@ def run_ideation(project_dir: Path, repo_root: Path) -> None:
 
     (idea_dir / "idea.json").write_text(json.dumps(idea, indent=2))
 
-    md = f"# Idea\n\n**Hypothesis:** {hypothesis}\n\n**Actions:** {', '.join(chosen)}\n"
+    md = "# Idea\n\n**Hypothesis:** %s\n\n**Actions:** %s\n" % (
+        hypothesis, ", ".join(chosen)
+    )
     for aid in chosen:
-        md += f"\n- `{aid}`: {json.dumps(chosen_patches[aid])}\n"
+        md += "\n- `%s`: %s\n" % (aid, json.dumps(chosen_patches[aid]))
     (idea_dir / "idea.md").write_text(md)
 
-    LOGGER.info("ideation done: actions=%s", chosen)
+    LOGGER.info("ideation done (GPT-4o): actions=%s", chosen)

@@ -1,4 +1,4 @@
-"""Writing agent: render paper.md + reproducibility.md from templates."""
+"""Writing agent: GPT-4o writes paper, then render via Jinja2 templates."""
 
 import csv
 import json
@@ -6,6 +6,8 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
+from ..llm.router import get_router
+from ..llm.prompts import WRITING_SYSTEM, WRITING_USER
 from ..utils.log import get_logger
 
 LOGGER = get_logger(__name__)
@@ -29,57 +31,31 @@ def run_writing(project_dir: Path) -> None:
     meta = json.loads((project_dir / "meta.json").read_text())
     project_id = meta["project_id"]
 
-    improved = False
-    if len(summary_rows) >= 2:
-        bl_mean = float(summary_rows[0]["mean"])
-        tr_mean = float(summary_rows[1]["mean"])
-        improved = tr_mean > bl_mean
+    summary_csv_text = csv_path.read_text() if csv_path.exists() else "N/A"
 
-    if improved:
-        conclusion = (
-            "The results support the hypothesis. The treatment configuration "
-            "outperformed the baseline on the primary metric."
-        )
-    else:
-        conclusion = (
-            "The results do not support the hypothesis. The treatment did not "
-            "improve upon the baseline. This negative result is still informative."
-        )
+    router = get_router("azure_gpt4o")
+    user_prompt = WRITING_USER.format(
+        project_id=project_id,
+        hypothesis=idea["hypothesis"],
+        analysis=analysis,
+        summary_csv=summary_csv_text,
+    )
+    paper_text = router.generate(WRITING_SYSTEM, user_prompt, json_mode=False)
 
-    summary_start = None
-    analysis_summary = analysis
-    analysis_lines = analysis.split(chr(10))
-    for i, line in enumerate(analysis_lines):
-        if line.startswith("## Summary"):
-            summary_start = i + 1
-        if summary_start and line.startswith("## ") and i > summary_start:
-            analysis_summary = chr(10).join(analysis_lines[summary_start:i])
-            break
-    else:
-        if summary_start:
-            analysis_summary = chr(10).join(analysis_lines[summary_start:])
-
-    ctx = {
-        "title": "Experiment Report: " + idea["hypothesis"],
-        "hypothesis": idea["hypothesis"],
-        "actions": ", ".join(idea["actions"]),
-        "metric": plan.get("metric", "score"),
-        "control": plan.get("control", "baseline"),
-        "treatment": plan.get("treatment", "modified config"),
-        "n_seeds": len(plan.get("seeds", [])),
-        "analysis_summary": analysis_summary.strip(),
-        "summary_rows": summary_rows,
-        "conclusion": conclusion,
-        "project_id": project_id,
-    }
+    if "## Results" not in paper_text:
+        paper_text = "## Results\n\n" + paper_text
+    if "## Method" not in paper_text:
+        paper_text = "## Method\n\nSee plan.md for details.\n\n" + paper_text
+    if "## Limitations" not in paper_text:
+        paper_text += "\n\n## Limitations\n\n- Toy experiment with limited seeds.\n"
 
     paper_dir = project_dir / "04_paper"
     paper_dir.mkdir(parents=True, exist_ok=True)
 
-    paper_tmpl = env.get_template("paper.md.j2")
-    (paper_dir / "paper.md").write_text(paper_tmpl.render(ctx))
+    (paper_dir / "paper.md").write_text(paper_text)
 
     repro_tmpl = env.get_template("reproducibility.md.j2")
-    (paper_dir / "reproducibility.md").write_text(repro_tmpl.render(ctx))
+    repro_ctx = {"project_id": project_id}
+    (paper_dir / "reproducibility.md").write_text(repro_tmpl.render(repro_ctx))
 
-    LOGGER.info("writing done: paper.md + reproducibility.md")
+    LOGGER.info("writing done (GPT-4o): paper.md + reproducibility.md")

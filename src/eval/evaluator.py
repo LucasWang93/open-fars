@@ -30,7 +30,9 @@ def run_evaluation(project_dir):
     plot_comparison(bl, tr, mn, results_dir/"fig1.png")
     bm=rows[0]["mean"] if len(rows)>0 else 0; tm=rows[1]["mean"] if len(rows)>1 else 0
     bs=rows[0]["std"] if len(rows)>0 else 0; ts_=rows[1]["std"] if len(rows)>1 else 0
-    d=tm-bm; imp=d>0
+    d=tm-bm
+    higher_better = all_m[0]["primary_metric"].get("higher_is_better", True) if all_m else True
+    imp = d > 0 if higher_better else d < 0
     lines=["# Analysis","","**Metric:** "+mn,"","## Summary"]
     lines.append("- Baseline: mean={:.4f}, std={:.4f}".format(bm,bs))
     lines.append("- Treatment: mean={:.4f}, std={:.4f}".format(tm,ts_))

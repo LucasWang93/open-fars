@@ -2,3 +2,20 @@ system:
   project_root: "projects"
   artifacts_root: "artifacts"
   timezone: "UTC"
+
+llm:
+  provider: "azure_openai"
+  model: "gpt-4o"
+  # Keys read from env vars: AZURE_ENDPOINT, AZURE_API_KEY, AZURE_API_VERSION
+  temperature: 0.7
+  max_tokens: 4096
+
+experiment:
+  models:
+    - name: "Qwen/Qwen3-VL-4B-Instruct"
+      type: "vision-language"
+      task: "image-text"
+    - name: "Qwen/Qwen3-4B-Instruct-2507"
+      type: "language"
+      task: "text-generation"
+  # HF_TOKEN read from env var

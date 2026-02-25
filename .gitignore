@@ -4,3 +4,7 @@ __pycache__/
 artifacts/
 published/
 *.db
+.env
+Keys/
+*.key
+*.pem
