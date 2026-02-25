@@ -27,5 +27,5 @@ treatment:
     rank: 16
   train:
     learning_rate: 0.0002
-    num_train_epochs: 1
-    warmup_ratio: 0.1
+    num_train_epochs: 3
+    warmup_ratio: 0.03

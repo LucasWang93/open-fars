@@ -1,15 +1,15 @@
 # Experiment Plan
 
-**Hypothesis:** Increasing the learning rate and warmup ratio will help the model converge faster and reduce eval_loss.
+**Hypothesis:** Increasing the learning rate and the number of training epochs will reduce eval_loss by allowing the model to learn more effectively over a longer period.
 
 ## Design
 - **Control:** baseline config
-- **Treatment:** Increase learning rate to 0.0002 and warmup ratio to 0.1.
-- **Variables:** learning_rate, warmup_ratio
+- **Treatment:** Increase learning_rate to 0.0002 and num_train_epochs to 3.
+- **Variables:** learning_rate, num_train_epochs
 - **Metric:** eval_loss
 - **Seeds:** [42, 123, 7]
 - **Models:** Qwen/Qwen3-VL-4B-Instruct, Qwen/Qwen3-4B-Instruct-2507
-- **Budget:** ~60 minutes
+- **Budget:** ~120 minutes
 
 ## Configs
 ```yaml
@@ -42,6 +42,6 @@ treatment:
     rank: 16
   train:
     learning_rate: 0.0002
-    num_train_epochs: 1
-    warmup_ratio: 0.1
+    num_train_epochs: 3
+    warmup_ratio: 0.03
 ```
