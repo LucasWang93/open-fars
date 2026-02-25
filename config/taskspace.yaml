@@ -1,0 +1,21 @@
+taskspace:
+  name: "toy_reward_shaping"
+  baseline:
+    script: "python -m exp.run --config configs/baseline.yaml"
+    primary_metric: "score"
+  actions:
+    - id: "lr_up"
+      patch:
+        train.lr: 0.0002
+    - id: "lr_down"
+      patch:
+        train.lr: 0.00005
+    - id: "temp_up"
+      patch:
+        gen.temperature: 1.2
+    - id: "temp_down"
+      patch:
+        gen.temperature: 0.7
+  limits:
+    max_actions_per_project: 2
+    seeds: [11, 22, 33]

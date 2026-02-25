@@ -1,0 +1,4 @@
+system:
+  project_root: "projects"
+  artifacts_root: "artifacts"
+  timezone: "UTC"

@@ -1,0 +1,45 @@
+# {{ title }}
+
+## Introduction
+
+This paper investigates the hypothesis: *{{ hypothesis }}*.
+
+We apply the following modifications to the baseline: {{ actions }}.
+
+## Method
+
+We run a controlled experiment comparing baseline and treatment configurations
+across {{ n_seeds }} random seeds. The primary metric is **{{ metric }}**.
+
+**Control:** {{ control }}
+
+**Treatment:** {{ treatment }}
+
+## Results
+
+{{ analysis_summary }}
+
+The following figure summarizes the results:
+
+![Baseline vs Treatment](../03_results/fig1.png)
+
+| Group | Mean | Std | N |
+|-------|------|-----|---|
+{% for row in summary_rows %}| {{ row.group }} | {{ row.mean }} | {{ row.std }} | {{ row.n }} |
+{% endfor %}
+
+## Limitations
+
+- This is a toy experiment with a simplified scoring function.
+- Only {{ n_seeds }} seeds were used; more trials would increase confidence.
+- The action space is restricted to predefined parameter changes.
+- No statistical significance test was performed.
+
+## Conclusion
+
+{{ conclusion }}
+
+## References
+
+- Experiment artifacts: `{{ project_id }}/02_exp/runs/`
+- Configuration: `{{ project_id }}/01_plan/config.yaml`
