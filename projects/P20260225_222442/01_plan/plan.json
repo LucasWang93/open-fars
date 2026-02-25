@@ -1,0 +1,19 @@
+{
+  "plan_summary": "Test the impact of decreasing learning rate and increasing warmup ratio on model stability and eval_loss during training.",
+  "variables": [
+    "learning_rate",
+    "warmup_ratio"
+  ],
+  "control": "Baseline configuration with learning_rate=0.0001 and warmup_ratio=0.03.",
+  "treatment": "Decrease learning_rate to 0.00005 and increase warmup_ratio to 0.1.",
+  "metric": "eval_loss",
+  "seeds": [
+    42,
+    123,
+    7
+  ],
+  "models": [
+    "Qwen/Qwen3-4B-Instruct-2507"
+  ],
+  "budget_estimate_minutes": 120
+}
