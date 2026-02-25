@@ -1,14 +1,14 @@
 # Experiment Plan
 
-**Hypothesis:** Decreasing the learning rate and increasing the warmup ratio will lead to a more stable training process, potentially improving eval_loss.
+**Hypothesis:** Increasing the learning rate and warmup ratio will improve model convergence and reduce eval_loss.
 
 ## Design
 - **Control:** baseline config
-- **Treatment:** Learning rate will be decreased, and warmup ratio will be increased. Specific values will be tested against the baseline for seeds [42, 123, 7].
+- **Treatment:** Increase learning rate and warmup ratio beyond baseline values. Specific increments will be determined and tested.
 - **Variables:** learning_rate, warmup_ratio
 - **Metric:** eval_loss
 - **Seeds:** [42, 123, 7]
-- **Models:** Qwen/Qwen3-VL-4B-Instruct, Qwen/Qwen3-4B-Instruct-2507
+- **Models:** Qwen/Qwen3-4B-Instruct-2507
 - **Budget:** ~180 minutes
 
 ## Configs
@@ -26,7 +26,6 @@ baseline:
     num_train_epochs: 1
     warmup_ratio: 0.03
 models:
-- Qwen/Qwen3-VL-4B-Instruct
 - Qwen/Qwen3-4B-Instruct-2507
 seeds:
 - 42
@@ -41,7 +40,7 @@ treatment:
     dropout: 0.05
     rank: 16
   train:
-    learning_rate: 5.0e-05
+    learning_rate: 0.0002
     num_train_epochs: 1
     warmup_ratio: 0.1
 ```

@@ -12,13 +12,11 @@ llm:
 
 experiment:
   models:
-    - name: "Qwen/Qwen3-VL-4B-Instruct"
-      type: "vision-language"
-      task: "image-text"
     - name: "Qwen/Qwen3-4B-Instruct-2507"
       type: "language"
       task: "text-generation"
   # HF_TOKEN read from env var
+  # VL model disabled for now due to transformers processor compat issue
 
 slurm:
   partition: "scavenge_gpu"

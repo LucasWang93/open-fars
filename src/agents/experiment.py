@@ -24,20 +24,15 @@ def _load_model(model_name: str):
     LOGGER.info("loading model %s ...", model_name)
     hf_token = os.environ.get("HF_TOKEN")
 
-    if "VL" in model_name:
-        from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
-        model = Qwen3VLForConditionalGeneration.from_pretrained(
-            model_name, torch_dtype="auto", device_map="auto", token=hf_token,
-        )
-        processor = AutoProcessor.from_pretrained(model_name, token=hf_token)
-        _MODEL_CACHE[model_name] = (model, processor, "vl")
-    else:
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name, torch_dtype="auto", device_map="auto", token=hf_token,
-        )
-        tokenizer = AutoTokenizer.from_pretrained(model_name, token=hf_token)
-        _MODEL_CACHE[model_name] = (model, tokenizer, "lm")
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name, torch_dtype="auto", device_map="auto", token=hf_token,
+        trust_remote_code=True,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_name, token=hf_token, trust_remote_code=True,
+    )
+    _MODEL_CACHE[model_name] = (model, tokenizer, "lm")
 
     LOGGER.info("model %s loaded", model_name)
     return _MODEL_CACHE[model_name]

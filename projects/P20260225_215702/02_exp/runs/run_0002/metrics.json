@@ -1,0 +1,33 @@
+{
+  "run_id": "run_0002",
+  "group": "baseline",
+  "model": "Qwen/Qwen3-4B-Instruct-2507",
+  "primary_metric": {
+    "name": "eval_loss",
+    "value": 5.1381,
+    "higher_is_better": false
+  },
+  "secondary_metrics": {
+    "eval_loss": 5.1381,
+    "n_prompts": 3
+  },
+  "seed": 123,
+  "config_hash": "sha256:dca1dfc7bf0dca4f",
+  "config": {
+    "data": {
+      "batch_size": 4,
+      "max_seq_length": 512
+    },
+    "lora": {
+      "alpha": 32,
+      "dropout": 0.05,
+      "rank": 16
+    },
+    "train": {
+      "learning_rate": 0.0001,
+      "num_train_epochs": 1,
+      "warmup_ratio": 0.03
+    }
+  },
+  "status": "SUCCESS"
+}

@@ -1,0 +1,19 @@
+{
+  "plan_summary": "This experiment tests whether increasing the learning rate and warmup ratio improves model convergence and reduces eval_loss.",
+  "variables": [
+    "learning_rate",
+    "warmup_ratio"
+  ],
+  "control": "Baseline configuration with a learning rate of 0.0001 and warmup ratio of 0.03.",
+  "treatment": "Increase learning rate and warmup ratio beyond baseline values. Specific increments will be determined and tested.",
+  "metric": "eval_loss",
+  "seeds": [
+    42,
+    123,
+    7
+  ],
+  "models": [
+    "Qwen/Qwen3-4B-Instruct-2507"
+  ],
+  "budget_estimate_minutes": 180
+}

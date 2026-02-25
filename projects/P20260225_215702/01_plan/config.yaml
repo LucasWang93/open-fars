@@ -11,7 +11,6 @@ baseline:
     num_train_epochs: 1
     warmup_ratio: 0.03
 models:
-- Qwen/Qwen3-VL-4B-Instruct
 - Qwen/Qwen3-4B-Instruct-2507
 seeds:
 - 42
@@ -26,6 +25,6 @@ treatment:
     dropout: 0.05
     rank: 16
   train:
-    learning_rate: 5.0e-05
+    learning_rate: 0.0002
     num_train_epochs: 1
     warmup_ratio: 0.1
