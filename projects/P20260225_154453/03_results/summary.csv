@@ -1,0 +1,3 @@
+group,mean,std,n,min,max
+baseline,0.4642,0.0206,3,0.4518,0.488
+treatment,0.4693,0.0206,3,0.4569,0.4931

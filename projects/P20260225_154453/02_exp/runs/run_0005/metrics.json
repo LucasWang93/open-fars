@@ -1,0 +1,24 @@
+{
+  "run_id": "run_0005",
+  "group": "treatment",
+  "primary_metric": {
+    "name": "score",
+    "value": 0.4931,
+    "higher_is_better": true
+  },
+  "secondary_metrics": {
+    "loss": 0.5069
+  },
+  "seed": 22,
+  "config_hash": "sha256:62d3c7bca7f4f95a",
+  "config": {
+    "gen": {
+      "temperature": 1.0
+    },
+    "train": {
+      "epochs": 5,
+      "lr": 0.0002
+    }
+  },
+  "status": "SUCCESS"
+}

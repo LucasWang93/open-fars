@@ -1,0 +1,17 @@
+{
+  "project_id": "P20260225_154453",
+  "state": "DONE",
+  "created_at": "2026-02-25T15:44:53.917446+00:00",
+  "updated_at": "2026-02-25T15:44:57.149567+00:00",
+  "retry_count": 0,
+  "budget": {
+    "tokens": 200000,
+    "gpu_hours": 0,
+    "wall_minutes": 90
+  },
+  "best": {
+    "run_id": null,
+    "score": null
+  },
+  "failure_reason": null
+}

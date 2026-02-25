@@ -1,5 +1,6 @@
 import argparse
 import json
+import subprocess
 import time
 from pathlib import Path
 
@@ -19,6 +20,23 @@ def load_system_config(repo_root: Path) -> dict:
     if not config_path.exists():
         return {}
     return yaml.safe_load(config_path.read_text()) or {}
+
+
+def git_sync(repo_root: Path, project_id: str, state: str) -> None:
+    """Commit project outputs and push to origin."""
+    try:
+        subprocess.run(["git", "add", "-A"], cwd=str(repo_root), capture_output=True, check=True)
+        msg = "project %s: %s" % (project_id, state)
+        subprocess.run(["git", "commit", "-m", msg], cwd=str(repo_root), capture_output=True)
+        result = subprocess.run(
+            ["git", "push"], cwd=str(repo_root), capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            LOGGER.info("git sync OK for %s", project_id)
+        else:
+            LOGGER.warning("git push failed: %s", result.stderr.strip())
+    except Exception as exc:
+        LOGGER.warning("git sync error: %s", exc)
 
 
 def run_once(repo_root: Path) -> None:
@@ -42,6 +60,7 @@ def run_once(repo_root: Path) -> None:
         LOGGER.error("failed to lock project %s", pid)
         return
 
+    state = "IDEA"
     try:
         while True:
             state = tick(pdir, repo_root, storage)
@@ -51,6 +70,8 @@ def run_once(repo_root: Path) -> None:
     finally:
         storage.unlock(pid)
     storage.close()
+
+    git_sync(repo_root, pid, state)
 
 
 def main() -> None:

@@ -1,0 +1,15 @@
+{
+  "plan_summary": "Test hypothesis: Applying lr_down, lr_up to the baseline will improve score.",
+  "variables": [
+    "train.lr"
+  ],
+  "control": "baseline config (no changes)",
+  "treatment": "apply lr_down, lr_up",
+  "metric": "score",
+  "seeds": [
+    11,
+    22,
+    33
+  ],
+  "budget_estimate_minutes": 6
+}
