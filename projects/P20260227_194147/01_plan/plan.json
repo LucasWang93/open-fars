@@ -1,0 +1,21 @@
+{
+  "plan_summary": "This experiment evaluates the impact of reducing the learning rate and LoRA rank on optimization stability and fine-tuning efficiency for a specified task.",
+  "variables": [
+    "learning_rate",
+    "lora.rank"
+  ],
+  "control": "Baseline configuration with learning_rate=0.0001 and LoRA rank=16.",
+  "treatment": "Lower the learning_rate to 0.00005 and reduce the LoRA rank to 8.",
+  "metric": "eval_loss",
+  "seeds": [
+    42,
+    123,
+    7
+  ],
+  "models": [
+    "Qwen/Qwen3-4B-Instruct-2507"
+  ],
+  "budget_estimate_minutes": 90,
+  "pattern_id": "pat_32f9328cb109",
+  "rationale": "Pattern pat_32f9328cb109 highlights that differential learning rates for low-rank matrices improve optimization stability and lead to faster convergence. By lowering both the learning rate and LoRA rank, we expect to enhance stability and achieve better task-specific adaptation."
+}
