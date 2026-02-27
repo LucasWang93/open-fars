@@ -1,0 +1,21 @@
+{
+  "plan_summary": "This experiment evaluates the impact of increasing the learning rate and LoRA rank on fine-tuning efficiency and representational rank for task-specific adaptation.",
+  "variables": [
+    "learning_rate",
+    "lora.rank"
+  ],
+  "control": "Baseline configuration with learning_rate=0.0001 and lora.rank=16.",
+  "treatment": "Increase learning_rate and lora.rank together. Test configurations with learning_rate values such as 0.0002, 0.0005, and 0.001, while increasing lora.rank to 32, 64, and 128 respectively.",
+  "metric": "eval_loss",
+  "seeds": [
+    42,
+    123,
+    7
+  ],
+  "models": [
+    "Qwen/Qwen3-4B-Instruct-2507"
+  ],
+  "budget_estimate_minutes": 240,
+  "pattern_id": "pat_86f7f6506b31",
+  "rationale": "The pattern indicates that combining differential learning rates with modifications to low-rank matrices, such as increasing LoRA rank, improves task-specific adaptation and representational capacity. A higher learning rate complements this by enabling faster updates, potentially enhancing adaptation further."
+}

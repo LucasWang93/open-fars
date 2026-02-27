@@ -81,8 +81,64 @@ def run_once(repo_root: Path) -> str:
         storage.unlock(pid)
     storage.close()
 
+    _record_to_knowledge(repo_root, pdir, pid, state)
     git_sync(repo_root, pid, state)
     return state
+
+
+def _record_to_knowledge(repo_root: Path, pdir: Path, pid: str, state: str) -> None:
+    """Record experiment outcome into the knowledge graph for history tracking."""
+    try:
+        from .knowledge.kg_store import KnowledgeGraph
+        from .knowledge.schemas import ExperimentRecord
+        from .utils.time import utc_now
+
+        kc_path = repo_root / "config" / "knowledge.yaml"
+        if kc_path.exists():
+            kc = yaml.safe_load(kc_path.read_text()).get("knowledge", {})
+        else:
+            kc = {}
+        kg_path = repo_root / kc.get("kg_db_path", "artifacts/knowledge.db")
+
+        idea_path = pdir / "00_idea" / "idea.json"
+        if not idea_path.exists():
+            return
+
+        idea = json.loads(idea_path.read_text())
+        actions = idea.get("actions", [])
+        hypothesis = idea.get("hypothesis", "")
+        pattern_id = idea.get("pattern_id")
+
+        eval_loss = None
+        analysis_path = pdir / "03_results" / "analysis.md"
+        if analysis_path.exists():
+            import re
+            text = analysis_path.read_text()
+            m = re.search(r"Treatment: mean=([0-9.]+)", text)
+            if m:
+                eval_loss = float(m.group(1))
+
+        if state == "DONE":
+            outcome = "negative" if eval_loss and eval_loss > 5.0 else "success"
+        else:
+            outcome = "failed"
+
+        record = ExperimentRecord(
+            project_id=pid,
+            pattern_id=pattern_id,
+            actions=actions,
+            hypothesis=hypothesis,
+            outcome=outcome,
+            eval_loss=eval_loss,
+            timestamp=utc_now(),
+        )
+
+        kg = KnowledgeGraph(kg_path)
+        kg.record_experiment(record)
+        kg.close()
+        LOGGER.info("recorded experiment history for %s: %s", pid, outcome)
+    except Exception as exc:
+        LOGGER.warning("failed to record experiment history: %s", exc)
 
 
 def run_daemon(repo_root: Path, max_projects: int = 0) -> None:
@@ -109,6 +165,11 @@ def run_daemon(repo_root: Path, max_projects: int = 0) -> None:
         try:
             state = run_once(repo_root)
             LOGGER.info("cycle %d finished with state: %s", count, state)
+            try:
+                from .knowledge.stats import log_stats
+                log_stats(repo_root)
+            except Exception:
+                pass
         except Exception:
             LOGGER.exception("cycle %d crashed, will retry after interval", count)
 

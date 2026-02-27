@@ -1,0 +1,36 @@
+knowledge:
+  paper_pool_dir: "paper_pool"
+  kg_db_path: "artifacts/knowledge.db"
+
+  collection:
+    source: "huggingface"
+    keywords:
+      - "LoRA fine-tuning"
+      - "LLM training optimization"
+      - "learning rate schedule"
+      - "parameter efficient fine-tuning"
+      - "instruction tuning"
+      - "model compression"
+      - "warmup strategy"
+      - "gradient accumulation"
+      - "mixed precision training"
+      - "quantization aware training"
+    max_papers: 200
+    days_lookback: 90
+
+  extraction:
+    max_units_per_paper: 10
+    min_confidence: 0.5
+    categories:
+      - "lr_schedule"
+      - "regularization"
+      - "architecture"
+      - "data_augmentation"
+      - "training_strategy"
+      - "hyperparameter"
+      - "optimization"
+
+  patterns:
+    min_evidence_count: 2
+    max_components: 4
+    top_k_retrieval: 5

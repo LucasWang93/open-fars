@@ -46,6 +46,15 @@ def _fail_or_retry(project_dir: Path, meta: dict, storage: Storage, reason: str)
     return meta["state"]
 
 
+def _get_ideation_mode(repo_root: Path) -> str:
+    """Read ideation mode from system config: 'pattern' or 'naive'."""
+    sys_path = repo_root / "config" / "system.yaml"
+    if sys_path.exists():
+        cfg = yaml.safe_load(sys_path.read_text()) or {}
+        return cfg.get("ideation", {}).get("mode", "pattern")
+    return "pattern"
+
+
 def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
     """Advance one state. Returns new state string."""
     meta = _load_meta(project_dir)
@@ -59,8 +68,13 @@ def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
 
     try:
         if state == "IDEA":
-            from ..agents.ideation import run_ideation
-            run_ideation(project_dir, repo_root)
+            mode = _get_ideation_mode(repo_root)
+            if mode == "pattern":
+                from ..agents.ideation_enhanced import run_ideation_enhanced
+                run_ideation_enhanced(project_dir, repo_root)
+            else:
+                from ..agents.ideation import run_ideation
+                run_ideation(project_dir, repo_root)
             ts = _load_taskspace(repo_root)
             valid_ids = [a["id"] for a in ts["actions"]]
             ok, msg = gate_a_ideation(project_dir, valid_ids)
@@ -69,8 +83,13 @@ def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
             meta["state"] = "PLAN"
 
         elif state == "PLAN":
-            from ..agents.planning import run_planning
-            run_planning(project_dir, repo_root)
+            mode = _get_ideation_mode(repo_root)
+            if mode == "pattern":
+                from ..agents.planning_enhanced import run_planning_enhanced
+                run_planning_enhanced(project_dir, repo_root)
+            else:
+                from ..agents.planning import run_planning
+                run_planning(project_dir, repo_root)
             meta["state"] = "RUN"
 
         elif state == "RUN":
