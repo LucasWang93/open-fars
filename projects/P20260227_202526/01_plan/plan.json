@@ -1,0 +1,21 @@
+{
+  "plan_summary": "Experiment to evaluate the impact of increasing warmup ratio and training epochs on optimization stability and convergence, measured by eval_loss.",
+  "variables": [
+    "warmup_ratio",
+    "num_train_epochs"
+  ],
+  "control": "Baseline configuration: learning rate of 0.0001, 1 training epoch, and warmup ratio of 0.03.",
+  "treatment": "Increase warmup ratio and number of training epochs systematically to assess their effect on optimization stability. Example configurations might include warmup_ratio = 0.1 and num_train_epochs = 3.",
+  "metric": "eval_loss",
+  "seeds": [
+    42,
+    123,
+    7
+  ],
+  "models": [
+    "Qwen/Qwen3-4B-Instruct-2507"
+  ],
+  "budget_estimate_minutes": 120,
+  "pattern_id": "pat_c2bd73372434",
+  "rationale": "The pattern highlights the importance of learning rate schedules, which are closely tied to warmup strategies, in achieving balanced exploration and convergence. Extending warmup can stabilize early optimization dynamics, while increasing epochs allows the model to utilize this stability for more robust convergence."
+}

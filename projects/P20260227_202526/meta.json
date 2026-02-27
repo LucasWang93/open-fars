@@ -1,0 +1,18 @@
+{
+  "project_id": "P20260227_202526",
+  "state": "DONE",
+  "created_at": "2026-02-27T20:25:26.998286+00:00",
+  "updated_at": "2026-02-27T20:28:06.878631+00:00",
+  "retry_count": 0,
+  "budget": {
+    "tokens": 200000,
+    "gpu_hours": 0,
+    "wall_minutes": 90
+  },
+  "best": {
+    "run_id": null,
+    "score": null
+  },
+  "failure_reason": null,
+  "slurm_job_id": 5345429
+}
