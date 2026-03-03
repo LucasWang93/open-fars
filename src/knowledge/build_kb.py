@@ -83,8 +83,13 @@ def step_mine_patterns(cfg: dict, kg: KnowledgeGraph) -> int:
 
 def step_rank(repo_root: Path, kg: KnowledgeGraph) -> None:
     LOGGER.info("=== Step 5: Rank patterns ===")
-    ranked = rank_patterns(kg, repo_root)
-    LOGGER.info("ranked %d patterns", len(ranked))
+    import yaml
+    ts_path = repo_root / "config" / "taskspace.yaml"
+    ts = yaml.safe_load(ts_path.read_text())["taskspace"]
+    patterns = kg.get_all_patterns()
+    ranked = rank_patterns(patterns, ts, kg, top_k=10)
+    LOGGER.info("ranked %d patterns, top score=%.4f",
+                len(ranked), ranked[0][1] if ranked else 0)
 
 
 def main():

@@ -1,0 +1,48 @@
+{
+  "run_id": "run_0003",
+  "group": "treatment",
+  "model": "Qwen/Qwen3-4B-Instruct-2507",
+  "primary_metric": {
+    "name": "step_success_rate",
+    "value": 0.0,
+    "higher_is_better": true
+  },
+  "secondary_metrics": {
+    "element_accuracy": 0.0,
+    "action_f1": 0.0,
+    "step_success_rate": 0.0
+  },
+  "seed": 42,
+  "config_hash": "sha256:9f33ca187ee61e47",
+  "config": {
+    "augmentation": "none",
+    "data": {
+      "max_eval_samples": 500,
+      "max_train_samples": 2000
+    },
+    "data_processing": "html_only",
+    "lora": {
+      "alpha": 32,
+      "dropout": 0.05,
+      "rank": 16,
+      "target_modules": [
+        "q_proj",
+        "v_proj",
+        "k_proj",
+        "o_proj"
+      ]
+    },
+    "model_config": "lora_r16",
+    "prompt_design": "direct_action",
+    "train": {
+      "gradient_accumulation_steps": 2,
+      "learning_rate": 0.0001,
+      "max_seq_length": 512,
+      "num_train_epochs": 5,
+      "per_device_train_batch_size": 8,
+      "warmup_ratio": 0.1
+    },
+    "training_strategy": "basic_curriculum_learning"
+  },
+  "status": "FAIL"
+}

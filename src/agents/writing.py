@@ -33,10 +33,19 @@ def run_writing(project_dir: Path) -> None:
 
     summary_csv_text = csv_path.read_text() if csv_path.exists() else "N/A"
 
+    title = idea.get("title", "Untitled Experiment")
+    method_desc = ""
+    if "method" in idea and isinstance(idea["method"], dict):
+        method_desc = json.dumps(idea["method"], indent=2)
+    elif "actions" in idea:
+        method_desc = f"Actions: {idea['actions']}"
+
     router = get_router("azure_gpt4o")
     user_prompt = WRITING_USER.format(
         project_id=project_id,
+        title=title,
         hypothesis=idea["hypothesis"],
+        method_description=method_desc,
         analysis=analysis,
         summary_csv=summary_csv_text,
     )

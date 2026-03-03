@@ -1,0 +1,75 @@
+{
+  "plan_summary": "This experiment compares a baseline vanilla supervised fine-tuning (SFT) approach with a simplified advantage-guided curriculum learning method for web navigation. The treatment reduces data and model complexity while restructuring prompts for direct action guidance.",
+  "variables": [
+    "training_strategy",
+    "data_processing",
+    "prompt_design",
+    "learning_rate",
+    "num_train_epochs",
+    "per_device_train_batch_size",
+    "max_seq_length",
+    "gradient_accumulation_steps"
+  ],
+  "baseline": {
+    "training_strategy": "vanilla_sft",
+    "data_processing": "html_simplified",
+    "prompt_design": "standard",
+    "model_config": "lora_r16",
+    "augmentation": "none",
+    "train": {
+      "learning_rate": 2e-05,
+      "num_train_epochs": 3,
+      "warmup_ratio": 0.1,
+      "per_device_train_batch_size": 4,
+      "max_seq_length": 2048,
+      "gradient_accumulation_steps": 4
+    },
+    "lora": {
+      "rank": 16,
+      "alpha": 32,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "v_proj",
+        "k_proj",
+        "o_proj"
+      ]
+    },
+    "data": {
+      "max_train_samples": 2000,
+      "max_eval_samples": 500
+    }
+  },
+  "treatment": {
+    "training_strategy": "basic_curriculum_learning",
+    "data_processing": "html_only",
+    "prompt_design": "direct_action",
+    "model_config": "lora_r16",
+    "augmentation": "none",
+    "train": {
+      "learning_rate": 0.0001,
+      "num_train_epochs": 5,
+      "warmup_ratio": 0.1,
+      "per_device_train_batch_size": 8,
+      "max_seq_length": 512,
+      "gradient_accumulation_steps": 2
+    },
+    "lora": {
+      "rank": 16,
+      "alpha": 32,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "v_proj",
+        "k_proj",
+        "o_proj"
+      ]
+    },
+    "data": {
+      "max_train_samples": 2000,
+      "max_eval_samples": 500
+    }
+  },
+  "metric": "step_success_rate",
+  "budget_estimate_minutes": 360
+}

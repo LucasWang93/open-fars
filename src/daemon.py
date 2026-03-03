@@ -105,21 +105,40 @@ def _record_to_knowledge(repo_root: Path, pdir: Path, pid: str, state: str) -> N
             return
 
         idea = json.loads(idea_path.read_text())
-        actions = idea.get("actions", [])
         hypothesis = idea.get("hypothesis", "")
         pattern_id = idea.get("pattern_id")
 
-        eval_loss = None
+        actions = idea.get("actions", [])
+        if not actions and "method" in idea:
+            method = idea["method"]
+            actions = [
+                method.get("training_strategy", ""),
+                method.get("data_processing", ""),
+                method.get("prompt_design", ""),
+            ]
+            actions = [a for a in actions if a]
+
+        primary_value = None
         analysis_path = pdir / "03_results" / "analysis.md"
         if analysis_path.exists():
             import re
             text = analysis_path.read_text()
             m = re.search(r"Treatment: mean=([0-9.]+)", text)
             if m:
-                eval_loss = float(m.group(1))
+                primary_value = float(m.group(1))
+
+        ts_path = repo_root / "config" / "taskspace.yaml"
+        higher_is_better = True
+        if ts_path.exists():
+            ts = yaml.safe_load(ts_path.read_text()).get("taskspace", {})
+            higher_is_better = ts.get("higher_is_better", True)
 
         if state == "DONE":
-            outcome = "negative" if eval_loss and eval_loss > 5.0 else "success"
+            if primary_value is not None:
+                outcome = "success" if (higher_is_better and primary_value > 0.1) or \
+                                       (not higher_is_better and primary_value < 5.0) else "negative"
+            else:
+                outcome = "negative"
         else:
             outcome = "failed"
 
@@ -129,7 +148,7 @@ def _record_to_knowledge(repo_root: Path, pdir: Path, pid: str, state: str) -> N
             actions=actions,
             hypothesis=hypothesis,
             outcome=outcome,
-            eval_loss=eval_loss,
+            eval_loss=primary_value,
             timestamp=utc_now(),
         )
 

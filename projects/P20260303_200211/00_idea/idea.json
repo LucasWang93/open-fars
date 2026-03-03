@@ -1,0 +1,24 @@
+{
+  "title": "Simplified Advantage-Guided Curriculum Learning for Web Navigation",
+  "hypothesis": "Using a simplified advantage-guided curriculum learning approach with reduced model and data complexity will improve step_success_rate by enabling stable training and effective task sequencing.",
+  "method": {
+    "training_strategy": "basic_curriculum_learning",
+    "data_processing": "html_only",
+    "prompt_design": "direct_action",
+    "model_config": "lora_r16",
+    "augmentation": "none",
+    "key_innovation": "Simplified the training strategy by removing trajectory augmentation and using a smaller LoRA rank to address potential resource constraints. Replaced 'html_plus_screenshot_caption' with 'html_only' to reduce data complexity and parsing errors. Simplified prompts to direct actions instead of reflection to avoid potential logic issues."
+  },
+  "config_hints": {
+    "learning_rate": 0.0001,
+    "num_train_epochs": 5,
+    "lora_rank": 16,
+    "max_seq_length": 512,
+    "batch_size": 8
+  },
+  "pattern_id": null,
+  "rationale": "The repeated failures at Gate B suggest a critical issue in the experimental setup, likely stemming from excessive resource demands (e.g., OOM errors due to large data/model size) or logic errors (e.g., NaN values from parsing complex data). By reducing the model complexity (LoRA rank 16), simplifying data inputs (html_only), and removing augmentation, the experiment becomes less prone to resource bottlenecks and logic errors. Simplifying prompt design further ensures robustness by reducing potential ambiguity or misalignment between the model and task requirements.",
+  "novelty_note": "The revised approach removes unnecessary complexity while retaining the core idea of advantage-guided curriculum learning. This ensures the hypothesis can still be tested effectively with fewer risks of failure due to resource or logic issues.",
+  "revised_from": "Advantage-Guided Curriculum Learning for Web Navigation",
+  "revision_count": 1
+}

@@ -8,12 +8,14 @@ import yaml
 from ..utils.log import get_logger
 from ..utils.time import utc_now
 from .gates import gate_a_ideation, gate_b_experiment, gate_c_paper
+from .recovery import diagnose_and_recover, run_revise, handle_slurm_failure
 from .storage import Storage
 
 LOGGER = get_logger(__name__)
 
 TRANSITIONS = ["IDEA", "PLAN", "RUN", "ANALYZE", "WRITE", "PUBLISH", "DONE"]
-MAX_RETRIES = 2
+MAX_RETRIES = 3
+MAX_REVISIONS = 1
 
 
 def _load_meta(project_dir: Path) -> dict:
@@ -30,29 +32,58 @@ def _load_taskspace(repo_root: Path) -> dict:
     return yaml.safe_load(ts_path.read_text())["taskspace"]
 
 
-def _fail_or_retry(project_dir: Path, meta: dict, storage: Storage, reason: str) -> str:
-    meta["retry_count"] += 1
-    if meta["retry_count"] > MAX_RETRIES:
-        meta["state"] = "ABORT"
-        meta["failure_reason"] = reason
-        _save_meta(project_dir, meta)
-        storage.update_state(meta["project_id"], "ABORT", meta)
-        LOGGER.error("project %s ABORT: %s", meta["project_id"], reason)
-        return "ABORT"
-    meta["failure_reason"] = reason
-    _save_meta(project_dir, meta)
-    storage.update_state(meta["project_id"], meta["state"], meta)
-    LOGGER.warning("project %s retry %d: %s", meta["project_id"], meta["retry_count"], reason)
-    return meta["state"]
-
-
 def _get_ideation_mode(repo_root: Path) -> str:
-    """Read ideation mode from system config: 'pattern' or 'naive'."""
     sys_path = repo_root / "config" / "system.yaml"
     if sys_path.exists():
         cfg = yaml.safe_load(sys_path.read_text()) or {}
         return cfg.get("ideation", {}).get("mode", "pattern")
     return "pattern"
+
+
+def _smart_fail_or_retry(
+    project_dir: Path,
+    repo_root: Path,
+    meta: dict,
+    storage: Storage,
+    reason: str,
+    stage: str,
+) -> str:
+    """Intelligent failure handling with diagnosis, recovery, and REVISE."""
+    pid = meta["project_id"]
+    meta["retry_count"] = meta.get("retry_count", 0) + 1
+
+    action = diagnose_and_recover(project_dir, meta, reason, stage)
+
+    if action.retry and meta["retry_count"] <= MAX_RETRIES:
+        meta["failure_reason"] = reason
+        _save_meta(project_dir, meta)
+        storage.update_state(pid, meta["state"], meta)
+        LOGGER.warning(
+            "project %s retry %d (%s): %s",
+            pid, meta["retry_count"], action.strategy, action.description,
+        )
+        return meta["state"]
+
+    revision_count = meta.get("revision_count", 0)
+    if revision_count < MAX_REVISIONS:
+        LOGGER.info("project %s: all retries exhausted, attempting REVISE", pid)
+        revised = run_revise(project_dir, repo_root)
+        if revised:
+            meta["revision_count"] = revision_count + 1
+            meta["retry_count"] = 0
+            meta["state"] = "PLAN"
+            meta["failure_reason"] = None
+            _save_meta(project_dir, meta)
+            storage.update_state(pid, "PLAN", meta)
+            LOGGER.info("project %s: REVISED idea, restarting from PLAN", pid)
+            return "PLAN"
+
+    meta["state"] = "ABORT"
+    meta["failure_reason"] = reason
+    _save_meta(project_dir, meta)
+    storage.update_state(pid, "ABORT", meta)
+    LOGGER.error("project %s ABORT: %s", pid, reason)
+    return "ABORT"
 
 
 def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
@@ -75,11 +106,12 @@ def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
             else:
                 from ..agents.ideation import run_ideation
                 run_ideation(project_dir, repo_root)
-            ts = _load_taskspace(repo_root)
-            valid_ids = [a["id"] for a in ts["actions"]]
-            ok, msg = gate_a_ideation(project_dir, valid_ids)
+
+            ok, msg = gate_a_ideation(project_dir)
             if not ok:
-                return _fail_or_retry(project_dir, meta, storage, f"Gate A: {msg}")
+                return _smart_fail_or_retry(
+                    project_dir, repo_root, meta, storage, f"Gate A: {msg}", "IDEA"
+                )
             meta["state"] = "PLAN"
 
         elif state == "PLAN":
@@ -109,14 +141,25 @@ def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
             storage.update_state(pid, "RUN", meta)
 
             LOGGER.info("experiment submitted as slurm job %d, polling...", job_id)
-            job_state = poll_job(job_id, timeout_minutes=slurm_cfg.get("timeout_minutes", 180))
+            job_state = poll_job(
+                job_id, timeout_minutes=slurm_cfg.get("timeout_minutes", 180)
+            )
 
             if job_state != "COMPLETED":
-                return _fail_or_retry(project_dir, meta, storage, "Slurm job %d: %s" % (job_id, job_state))
+                slurm_action = handle_slurm_failure(job_state, project_dir, meta)
+                err_log = _read_slurm_error_log(log_dir, job_id)
+                reason = f"Slurm job {job_id}: {job_state}"
+                if err_log:
+                    reason += f"\n{err_log}"
+                return _smart_fail_or_retry(
+                    project_dir, repo_root, meta, storage, reason, "RUN"
+                )
 
             ok, msg = gate_b_experiment(project_dir)
             if not ok:
-                return _fail_or_retry(project_dir, meta, storage, "Gate B: %s" % msg)
+                return _smart_fail_or_retry(
+                    project_dir, repo_root, meta, storage, f"Gate B: {msg}", "RUN"
+                )
             meta["state"] = "ANALYZE"
 
         elif state == "ANALYZE":
@@ -129,7 +172,9 @@ def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
             run_writing(project_dir)
             ok, msg = gate_c_paper(project_dir)
             if not ok:
-                return _fail_or_retry(project_dir, meta, storage, f"Gate C: {msg}")
+                return _smart_fail_or_retry(
+                    project_dir, repo_root, meta, storage, f"Gate C: {msg}", "WRITE"
+                )
             meta["state"] = "PUBLISH"
 
         elif state == "PUBLISH":
@@ -139,9 +184,23 @@ def tick(project_dir: Path, repo_root: Path, storage: Storage) -> str:
 
     except Exception as exc:
         LOGGER.exception("tick failed for %s at %s", pid, state)
-        return _fail_or_retry(project_dir, meta, storage, str(exc))
+        return _smart_fail_or_retry(
+            project_dir, repo_root, meta, storage, str(exc), state
+        )
 
     _save_meta(project_dir, meta)
     storage.update_state(pid, meta["state"], meta)
     LOGGER.info("project %s -> %s", pid, meta["state"])
     return meta["state"]
+
+
+def _read_slurm_error_log(log_dir: Path, job_id: int, max_chars: int = 2000) -> str:
+    """Read the last portion of a Slurm .err log file."""
+    err_file = log_dir / f"{job_id}.err"
+    if not err_file.exists():
+        return ""
+    try:
+        text = err_file.read_text()
+        return text[-max_chars:] if len(text) > max_chars else text
+    except Exception:
+        return ""

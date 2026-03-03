@@ -1,30 +1,90 @@
 taskspace:
-  name: "qwen3_finetuning"
-  models:
-    - "Qwen/Qwen3-4B-Instruct-2507"
+  name: "gui_agent_action_planning"
+  domain: "GUI Agent"
+  focus: "Action Planning for Web Navigation"
+  benchmark: "mind2web"
+  base_model: "Qwen/Qwen3-4B-Instruct-2507"
+
+  primary_metric: "step_success_rate"
+  higher_is_better: true
+
+  evaluation_metrics:
+    - "element_accuracy"
+    - "action_f1"
+    - "step_success_rate"
+
+  exploration_dimensions:
+    - name: "training_strategy"
+      description: "How the model is trained"
+      examples:
+        - "vanilla_sft"
+        - "curriculum_learning"
+        - "multitask_learning"
+        - "contrastive_learning"
+        - "self_play"
+        - "rejection_sampling"
+
+    - name: "data_processing"
+      description: "How webpage state is represented as model input"
+      examples:
+        - "html_full"
+        - "html_simplified"
+        - "element_candidates"
+        - "accessibility_tree"
+        - "html_plus_screenshot_caption"
+
+    - name: "prompt_design"
+      description: "How the task is formatted for the model"
+      examples:
+        - "standard"
+        - "chain_of_thought"
+        - "action_decomposition"
+        - "plan_then_act"
+        - "reflection"
+        - "few_shot_exemplars"
+
+    - name: "model_config"
+      description: "Model architecture and adapter configuration"
+      examples:
+        - "lora_r16"
+        - "lora_r32"
+        - "lora_r64"
+        - "qlora_4bit"
+        - "dora"
+        - "full_finetune_last_2_layers"
+
+    - name: "augmentation"
+      description: "Data augmentation strategies"
+      examples:
+        - "none"
+        - "task_rephrasing"
+        - "negative_sampling"
+        - "element_masking"
+        - "trajectory_augmentation"
+        - "cross_website_transfer"
+
   baseline:
-    script: "python -m src.compute.train_qwen --config"
-    primary_metric: "eval_loss"
-    higher_is_better: false
-  actions:
-    - id: "lr_up"
-      patch:
-        train.learning_rate: 0.0002
-    - id: "lr_down"
-      patch:
-        train.learning_rate: 0.00005
-    - id: "warmup_more"
-      patch:
-        train.warmup_ratio: 0.1
-    - id: "epochs_up"
-      patch:
-        train.num_train_epochs: 3
-    - id: "lora_rank_up"
-      patch:
-        lora.rank: 32
-    - id: "lora_rank_down"
-      patch:
-        lora.rank: 8
-  limits:
-    max_actions_per_project: 2
-    seeds: [42, 123, 7]
+    training_strategy: "vanilla_sft"
+    data_processing: "html_simplified"
+    prompt_design: "standard"
+    model_config: "lora_r16"
+    augmentation: "none"
+    train:
+      learning_rate: 2.0e-5
+      num_train_epochs: 3
+      warmup_ratio: 0.1
+      per_device_train_batch_size: 4
+      max_seq_length: 2048
+      gradient_accumulation_steps: 4
+    lora:
+      rank: 16
+      alpha: 32
+      dropout: 0.05
+      target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+    data:
+      max_train_samples: 2000
+      max_eval_samples: 500
+
+  constraints:
+    max_gpu_hours: 6
+    seeds: [42, 123]

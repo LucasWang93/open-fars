@@ -5,30 +5,33 @@ knowledge:
   collection:
     source: "huggingface"
     keywords:
-      - "LoRA fine-tuning"
-      - "LLM training optimization"
-      - "learning rate schedule"
-      - "parameter efficient fine-tuning"
-      - "instruction tuning"
-      - "model compression"
-      - "warmup strategy"
-      - "gradient accumulation"
-      - "mixed precision training"
-      - "quantization aware training"
+      - "gui agent"
+      - "web navigation"
+      - "action planning"
+      - "visual grounding"
+      - "Mind2Web"
+      - "WebArena"
+      - "screen understanding"
+      - "UI automation"
+      - "multimodal agent"
+      - "web agent"
+      - "GUI grounding"
+      - "computer use"
     max_papers: 200
-    days_lookback: 90
+    days_lookback: 180
 
   extraction:
     max_units_per_paper: 10
     min_confidence: 0.5
     categories:
-      - "lr_schedule"
-      - "regularization"
-      - "architecture"
-      - "data_augmentation"
+      - "grounding"
+      - "action_prediction"
       - "training_strategy"
-      - "hyperparameter"
-      - "optimization"
+      - "prompt_design"
+      - "data_augmentation"
+      - "evaluation"
+      - "architecture"
+      - "other"
 
   patterns:
     min_evidence_count: 2

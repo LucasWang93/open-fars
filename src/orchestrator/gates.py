@@ -9,8 +9,12 @@ from ..utils.log import get_logger
 LOGGER = get_logger(__name__)
 
 
-def gate_a_ideation(project_dir: Path, valid_action_ids: list[str]) -> Tuple[bool, str]:
-    """Validate idea.md output: chosen actions must be in taskspace."""
+def gate_a_ideation(project_dir: Path, valid_action_ids: list = None) -> Tuple[bool, str]:
+    """Validate idea.json output.
+
+    For free-form ideation: checks hypothesis + method fields exist.
+    For legacy action-based ideation: checks actions are valid.
+    """
     idea_path = project_dir / "00_idea" / "idea.json"
     if not idea_path.exists():
         return False, "idea.json not found"
@@ -19,13 +23,23 @@ def gate_a_ideation(project_dir: Path, valid_action_ids: list[str]) -> Tuple[boo
     except json.JSONDecodeError as exc:
         return False, f"idea.json parse error: {exc}"
 
-    chosen = idea.get("actions", [])
-    if not chosen:
-        return False, "no actions chosen"
-    for a in chosen:
-        if a not in valid_action_ids:
-            return False, f"invalid action: {a}"
-    return True, "ok"
+    if "hypothesis" not in idea or not idea["hypothesis"]:
+        return False, "missing hypothesis"
+
+    if "method" in idea and isinstance(idea["method"], dict):
+        return True, "ok"
+
+    if "actions" in idea:
+        chosen = idea["actions"]
+        if not chosen:
+            return False, "no actions chosen"
+        if valid_action_ids:
+            for a in chosen:
+                if a not in valid_action_ids:
+                    return False, f"invalid action: {a}"
+        return True, "ok"
+
+    return False, "idea.json missing both 'method' and 'actions'"
 
 
 def gate_b_experiment(project_dir: Path) -> Tuple[bool, str]:
@@ -33,10 +47,11 @@ def gate_b_experiment(project_dir: Path) -> Tuple[bool, str]:
     runs_dir = project_dir / "02_exp" / "runs"
     if not runs_dir.exists():
         return False, "runs directory missing"
-    run_dirs = sorted(runs_dir.iterdir())
+    run_dirs = [d for d in sorted(runs_dir.iterdir()) if d.is_dir()]
     if not run_dirs:
         return False, "no run directories"
 
+    success_count = 0
     for rd in run_dirs:
         mf = rd / "metrics.json"
         if not mf.exists():
@@ -47,8 +62,14 @@ def gate_b_experiment(project_dir: Path) -> Tuple[bool, str]:
             return False, f"metrics.json parse error in {rd.name}: {exc}"
         if m.get("status") not in ("SUCCESS", "FAIL"):
             return False, f"invalid status in {rd.name}"
-        if m.get("status") == "SUCCESS" and "primary_metric" not in m:
-            return False, f"missing primary_metric in {rd.name}"
+        if m.get("status") == "SUCCESS":
+            if "primary_metric" not in m:
+                return False, f"missing primary_metric in {rd.name}"
+            success_count += 1
+
+    if success_count == 0:
+        return False, "all runs failed"
+
     return True, "ok"
 
 

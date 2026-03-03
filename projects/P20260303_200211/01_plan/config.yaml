@@ -1,0 +1,60 @@
+base_model: Qwen/Qwen3-4B-Instruct-2507
+baseline:
+  augmentation: none
+  data:
+    max_eval_samples: 500
+    max_train_samples: 2000
+  data_processing: html_simplified
+  lora:
+    alpha: 32
+    dropout: 0.05
+    rank: 16
+    target_modules:
+    - q_proj
+    - v_proj
+    - k_proj
+    - o_proj
+  model_config: lora_r16
+  prompt_design: standard
+  train:
+    gradient_accumulation_steps: 4
+    learning_rate: 2.0e-05
+    max_seq_length: 2048
+    num_train_epochs: 3
+    per_device_train_batch_size: 4
+    warmup_ratio: 0.1
+  training_strategy: vanilla_sft
+benchmark: mind2web
+evaluation_metrics:
+- element_accuracy
+- action_f1
+- step_success_rate
+primary_metric: step_success_rate
+seeds:
+- 42
+- 123
+treatment:
+  augmentation: none
+  data:
+    max_eval_samples: 500
+    max_train_samples: 2000
+  data_processing: html_only
+  lora:
+    alpha: 32
+    dropout: 0.05
+    rank: 16
+    target_modules:
+    - q_proj
+    - v_proj
+    - k_proj
+    - o_proj
+  model_config: lora_r16
+  prompt_design: direct_action
+  train:
+    gradient_accumulation_steps: 2
+    learning_rate: 0.0001
+    max_seq_length: 512
+    num_train_epochs: 5
+    per_device_train_batch_size: 8
+    warmup_ratio: 0.1
+  training_strategy: basic_curriculum_learning
